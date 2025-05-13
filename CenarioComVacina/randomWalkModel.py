@@ -48,11 +48,11 @@ class RandomWalkModel:
  
         # Defines transition probabilities for state changes.
         self.transitionProbabilities = [[1.0, 0.0, 0.0, 0.0],  # Healthy transitions
-                                        [0.0, 0.30, 0.30, 0.40],  # Sick transitions
+                                        [0.1, 0.2, 0.1, 0.6],  # Sick transitions
                                         [0.0, 0.0, 1.0, 0.0],    # Dead transitions
-                                        [0.05, 0.0, 0.0, 0.95]]  # Immune transitions
+                                        [0.02, 0.0, 0.0, 0.98]]  # Immune transitions
         
-        self.contagionFactor = 0.10  # Probability of getting sick after interaction with a sick individual
+        self.contagionFactor = 0.03  # Probability of getting sick after interaction with a sick individual
         self.socialDistanceEffect = 0.0 # Probability of avoiding contact because of social distancing
 
         # Initializes the population matrix with healthy individuals.
@@ -271,7 +271,7 @@ class RandomWalkModel:
 
 # MAIN PROGRAM
 
-numberOfRuns = 10       # Number of simulation runs
+numberOfRuns = 100      # Number of simulation runs
 gridSize = 166            # Size of the population grid
 numberOfGenerations = 52     # Number of generations (iterations) per simulation run
 
@@ -280,4 +280,4 @@ for i in range(numberOfRuns):
     model = RandomWalkModel(gridSize)
     model.simulation(numberOfGenerations, False)
     print(model.numberOfDeaths())
-    model.printImage(i)
+    #model.printImage(i)
