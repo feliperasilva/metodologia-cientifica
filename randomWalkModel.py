@@ -271,7 +271,7 @@ class RandomWalkModel:
 
 # MAIN PROGRAM
 
-numberOfRuns = 100        # Number of simulation runs
+numberOfRuns = 10       # Number of simulation runs
 gridSize = 166            # Size of the population grid
 numberOfGenerations = 52     # Number of generations (iterations) per simulation run
 
@@ -280,4 +280,4 @@ for i in range(numberOfRuns):
     model = RandomWalkModel(gridSize)
     model.simulation(numberOfGenerations, False)
     print(model.numberOfDeaths())
-    #model.printImage(i)
+    model.printImage(i)
