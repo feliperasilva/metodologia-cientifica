@@ -27,6 +27,7 @@ class State(enum.Enum):
     sick = 1     # Sick state
     dead = 2     # Dead state
     immune = 3   # Immune state
+    recovered = 4 # Recovered state
 
 # Class representing each individual in the population.
 class Individual:
@@ -47,12 +48,13 @@ class RandomWalkModel:
         self.currentGeneration = 0     # Current generation count
  
         # Defines transition probabilities for state changes.
-        self.transitionProbabilities = [[1.0, 0.0, 0.0, 0.0],  # Healthy transitions
-                                        [0.0, 0.30, 0.30, 0.40],  # Sick transitions
-                                        [0.0, 0.0, 1.0, 0.0],    # Dead transitions
-                                        [0.05, 0.0, 0.0, 0.95]]  # Immune transitions
+        self.transitionProbabilities = [[1.0, 0.0, 0.0, 0.0, 0.0],  # Healthy transitions
+                                        [0.0, 0.10, 0.01, 0.00, 0.89],  # Sick transitions
+                                        [0.0, 0.0, 1.0, 0.0, 0.0],    # Dead transitions
+                                        [0.00, 0.00, 0.00, 0.98, 0.02], # Immune transitions
+                                        [0.90, 0.10, 0.00, 0.00, 0.00]]  # Recovered transitions
         
-        self.contagionFactor = 0.10  # Probability of getting sick after interaction with a sick individual
+        self.contagionFactor = 0.15  # Probability of getting sick after interaction with a sick individual
         self.socialDistanceEffect = 0.0 # Probability of avoiding contact because of social distancing
 
         # Initializes the population matrix with healthy individuals.
@@ -261,6 +263,8 @@ class RandomWalkModel:
                     img.putpixel((i, j), (256, 0, 0)) # red -> dead
                 elif (self.population[i][j].state == State.immune):
                     img.putpixel((i, j), (0, 0, 256)) # blue -> immune
+                elif (self.population[i][j].state == State.recovered):
+                    img.putpixel((i, j), (255, 105, 180)) # rosa -> recovered
                 else:
                     print("INVALID STATE")
 
@@ -271,7 +275,7 @@ class RandomWalkModel:
 
 # MAIN PROGRAM
 
-numberOfRuns = 100       # Number of simulation runs
+numberOfRuns = 1000       # Number of simulation runs
 gridSize = 166            # Size of the population grid
 numberOfGenerations = 52     # Number of generations (iterations) per simulation run
 
