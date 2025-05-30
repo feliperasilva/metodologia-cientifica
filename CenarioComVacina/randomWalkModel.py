@@ -17,28 +17,22 @@
 import enum
 import random
 from PIL import Image
+import os
 
 # for image generation:
 # pip install Pillow 
 
 # Enum class to represent the possible states of an individual in the simulation.
 class State(enum.Enum):
-    healthy = 0  # Healthy state
-    sick = 1     # Sick state
-    dead = 2     # Dead state
-    immune = 3   # Immune state
-    recovered = 4 # Recovered state
+    healthy = 0    # Saudável
+    sick = 1       # Doente
+    immune = 2     # Imune
+    recovered = 3  # Recuperado
+    dead = 4       # Morto
 
-# Class representing each individual in the population.
-class Individual:
-    def __init__(self, state):
-        self.state = state      # Current state of the individual
-
-# Main class implementing the Random Walk Model simulation.
 class RandomWalkModel:
     """
     Initializes the simulation's population grid and parameters.
-        
     Args:
         populationMatrixSize (int): The size of the square population matrix.
     """
@@ -46,16 +40,21 @@ class RandomWalkModel:
         self.population = []           # Current state of the population grid
         self.nextPopulation = []       # Next state of the population grid after interactions
         self.currentGeneration = 0     # Current generation count
- 
-        # Defines transition probabilities for state changes.
-        self.transitionProbabilities = [[1.0, 0.0, 0.0, 0.0, 0.0],  # Healthy transitions
-                                        [0.0, 0.10, 0.005, 0.00, 0.895],  # Sick transitions
-                                        [0.0, 0.0, 1.0, 0.0, 0.0],    # Dead transitions
-                                        [0.00, 0.00, 0.00, 0.99, 0.01], # Immune transitions
-                                        [0.95, 0.05, 0.00, 0.00, 0.00]]  # Recovered transitions
-        
-        self.contagionFactor = 0.15  # Probability of getting sick after interaction with a sick individual
+        self.total_cases = 0           # Total number of case transitions (healthy/recovered -> sick)
+
+        # NOVA MATRIZ DE PROBABILIDADES BASEADA NA IMAGEM 1 E ORDEM AJUSTADA
+        # Ordem: Saudável, Doente, Imune, Recuperado, Morto
+        self.transitionProbabilities = [
+            [1.00, 0.00, 0.00, 0.00, 0.00],    # Saudável
+            [0.00, 0.10, 0.25, 0.648, 0.002],  # Doente
+            [0.00, 0.00, 0.995, 0.005, 0.00],  # Imune
+            [0.90, 0.10, 0.00, 0.00, 0.00],    # Recuperado
+            [0.00, 0.00, 0.00, 0.00, 1.00],    # Morto
+        ]
+
+        self.contagionFactor = 0.06  # Atualizado conforme imagem 
         self.socialDistanceEffect = 0.0 # Probability of avoiding contact because of social distancing
+
 
         # Initializes the population matrix with healthy individuals.
         for i in range(populationMatrixSize):
@@ -68,8 +67,9 @@ class RandomWalkModel:
         # Sets the initial sick individual at the center of the matrix.
         startIndex = int(populationMatrixSize / 2)
         self.population[startIndex][startIndex].state = State.sick
+        self.population[startIndex][startIndex].previous_state = State.healthy  # Initial transition
         self.nextPopulation[startIndex][startIndex].state = State.sick
-        #print("first case", startIndex, startIndex)
+        self.nextPopulation[startIndex][startIndex].previous_state = State.healthy
 
     """
     Determines the next state of an individual based on transition probabilities 
@@ -88,10 +88,10 @@ class RandomWalkModel:
         if (individual.state == State.healthy):  # Skips transitions for healthy individuals
             return
         
-        if (individual.state == State.sick):  # Only sick individuals with spread the virus
+        if (individual.state == State.sick):  # Only sick individuals spread the virus
             self.computeSocialInteractions(line, column)
 
-        # TODO: Determines the next state using probabilities for the current state
+        # Determines the next state using probabilities for the current state
         probabilities = self.transitionProbabilities[individual.state.value]
         number = random.random()
         cumulativeProbability = 0
@@ -107,8 +107,7 @@ class RandomWalkModel:
     after interacting with a sick individual.
     
     Args:
-        individual (Individual): The healthy individual being evaluated.
-        neighbour (Individual): The sick neighbor.
+        neighbour (Individual): The healthy individual being evaluated.
     """
     def computeSickContact(self, neighbour):
         number = random.random()
@@ -128,8 +127,6 @@ class RandomWalkModel:
         initialLine = max(0, line - 1)
         finalLine = min(line + 2, len(self.population))
 
-        #print(line, column)
-
         for i in range(initialLine, finalLine):
             initialColumn = max(0, column - 1)
             finalColumn = min(column + 2, len(self.population[i]))
@@ -143,24 +140,32 @@ class RandomWalkModel:
                 if (not avoidContact):
                     neighbour = self.nextPopulation[i][j]
                     if (neighbour.state == State.healthy):
-                        #print("->", i, j)
                         self.computeSickContact(neighbour)
-                        #print("->", i, j, neighbour.state)
 
     """
     Advances the simulation by transitioning all individuals 
     to their next state based on current conditions.
+    Also counts the number of new cases occurred in this generation.
     """
     def nextGeneration(self):
+        # Step 1: compute new states
         for i in range(len(self.population)):
             for j in range(len(self.population[i])):
                 self.individualTransition(i, j)
 
-        # The next population becomes the current one 
+        # Step 2: count new cases and update states & previous_states
         for i in range(len(self.population)):
             for j in range(len(self.population[i])):
-                self.population[i][j].state = self.nextPopulation[i][j].state
-  
+                individual = self.population[i][j]
+                next_individual = self.nextPopulation[i][j]
+                # Count transition: healthy or recovered to sick
+                if (individual.state in [State.healthy, State.recovered] and next_individual.state == State.sick):
+                    self.total_cases += 1
+                # Update previous_state before copying state
+                individual.previous_state = individual.state
+                # Copy next state to current
+                individual.state = next_individual.state
+
     """Generates a report of the current state counts in the population."""
     def report(self):
         states = list(State)
@@ -187,10 +192,8 @@ class RandomWalkModel:
     def logHeaders(self, verbose):
         if (verbose):
             states = list(State)
-
             for state in states:
                 print(state, '\t', end = ' ')
-
             print()
 	
     """
@@ -214,28 +217,11 @@ class RandomWalkModel:
         """
     def simulation(self, generations, verbose):
         self.logHeaders(verbose)
-
         self.logReport(verbose)
-
-		#self.logPopulation(self.population)
-
         for i in range(generations):
             self.nextGeneration()
-			#self.logPopulation(self.population)
             self.logReport(verbose)
-			#if (i == generations):
-			# model.printImage(i)
-	
-    """Counts the number of dead individuals in the population."""
-    def numberOfDeaths(self):
-        deaths = 0
 
-        for row in self.population:
-            for individual in row:
-                if individual.state == State.dead:
-                    deaths += 1
-        return deaths
-    
     """Prints the status of each individual in the population on the console, formatted in table form."""
     def logPopulation(self, population):
         for i in range(len(population)):
@@ -246,42 +232,52 @@ class RandomWalkModel:
 
     """
         Creates and displays an image of the population after the end of the simulation.
+        Pure colors:
+        - Saudável (healthy):       verde puro      (0,255,0)
+        - Doente (sick):           vermelho puro   (255,0,0)
+        - Morto (dead):            preto puro      (0,0,0)
+        - Imune (immune):          ciano puro      (0,255,255)
+        - Recuperado (recovered):  magenta puro    (255,0,255)
+        Salva na pasta img/
     """
     def printImage(self, name):
-
+        # Garante que a pasta img existe
+        os.makedirs("img", exist_ok=True)
         lines = len(self.population)
         columns = len(self.population[0])
-        img = Image.new( mode = "RGB", size = (columns, lines))
-            
+        img = Image.new(mode="RGB", size=(columns, lines))
         for i in range(lines):
             for j in range(columns):
-                if (self.population[i][j].state == State.healthy):
-                    img.putpixel((i, j), (0, 256, 0)) # green -> healthy
-                elif (self.population[i][j].state == State.sick):
-                    img.putpixel((i, j), (256, 256, 0)) # yellow -> sick
-                elif (self.population[i][j].state == State.dead):
-                    img.putpixel((i, j), (256, 0, 0)) # red -> dead
-                elif (self.population[i][j].state == State.immune):
-                    img.putpixel((i, j), (0, 0, 256)) # blue -> immune
-                elif (self.population[i][j].state == State.recovered):
-                    img.putpixel((i, j), (255, 105, 180)) # rosa -> recovered
+                state = self.population[i][j].state
+                if state == State.healthy:
+                    img.putpixel((i, j), (0, 255, 0))       # verde puro
+                elif state == State.sick:
+                    img.putpixel((i, j), (255, 0, 0))       # vermelho puro
+                elif state == State.dead:
+                    img.putpixel((i, j), (0, 0, 0))         # preto puro
+                elif state == State.immune:
+                    img.putpixel((i, j), (0, 255, 255))     # ciano puro
+                elif state == State.recovered:
+                    img.putpixel((i, j), (255, 0, 255))     # magenta puro
                 else:
                     print("INVALID STATE")
 
-        img.save("gen" + str(name) + ".png")
+        filename = os.path.join("img", f"gen{name}.png")
+        img.save(filename)
         img.show()
-
-
+        print(f"Imagem salva em: {os.path.abspath(filename)}")
+        return os.path.abspath(filename)
 
 # MAIN PROGRAM
 
 numberOfRuns = 1000       # Number of simulation runs
 gridSize = 166            # Size of the population grid
-numberOfGenerations = 52     # Number of generations (iterations) per simulation run
+numberOfGenerations = 52  # Number of generations (iterations) per simulation run
 
-# Run the simulation multiple times and print the number of deaths after each run
+# Run the simulation multiple times and print the number of cases after each run
 for i in range(numberOfRuns):
     model = RandomWalkModel(gridSize)
     model.simulation(numberOfGenerations, False)
-    print(model.numberOfDeaths())
-    #model.printImage(i)
+    print("Casos ocorridos:", model.total_cases)
+    # Para salvar e mostrar a imagem final da simulação, descomente a linha abaixo:
+    # model.printImage(i)
