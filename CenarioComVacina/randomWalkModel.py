@@ -196,7 +196,7 @@ class RandomWalkModel:
 
 # PROGRAMA PRINCIPAL
 
-numberOfRuns = 10             # Quantidade de execuções da simulação
+numberOfRuns = 1000             # Quantidade de execuções da simulação
 gridSize = 166                # Tamanho da matriz populacional
 numberOfGenerations = 52      # Número de gerações/iterações por execução
 
@@ -204,6 +204,6 @@ numberOfGenerations = 52      # Número de gerações/iterações por execução
 for i in range(numberOfRuns):
     model = RandomWalkModel(gridSize)
     model.simulation(numberOfGenerations, False)
-    print("Casos ocorridos:", model.total_cases)
+    print(model.total_cases)
     # Para salvar e mostrar a imagem final da simulação, descomente a linha abaixo:
     #model.printImage(i)

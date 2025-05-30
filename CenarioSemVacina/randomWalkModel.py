@@ -166,12 +166,12 @@ class RandomWalkModel:
 
 # MAIN PROGRAM
 
-numberOfRuns = 10
+numberOfRuns = 1000
 gridSize = 166
 numberOfGenerations = 52
 
 for i in range(numberOfRuns):
     model = RandomWalkModel(gridSize)
     model.simulation(numberOfGenerations, False)
-    print("Casos ocorridos:", model.total_cases)
+    print(model.total_cases)
     #model.printImage(i)
